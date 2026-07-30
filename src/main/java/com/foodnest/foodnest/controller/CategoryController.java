@@ -9,7 +9,7 @@ import com.foodnest.foodnest.entity.Category;
 import com.foodnest.foodnest.service.CategoryService;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
-@CrossOrigin(origins = "http://localhost:5173")
+
 @RestController
 @RequestMapping("/category")
 public class CategoryController {
