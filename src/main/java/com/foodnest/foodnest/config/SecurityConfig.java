@@ -39,7 +39,8 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "http://localhost:5174",
-                "http://localhost:3000"
+                "http://localhost:3000",
+                "https://foodnest-frontend.vercel.app"
         ));
 
         configuration.setAllowedMethods(List.of(
@@ -71,7 +72,6 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
-                        // Public APIs
                         .requestMatchers(
                                 "/users/register",
                                 "/users/login",
@@ -82,7 +82,6 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
 
-                        // Everything else requires login
                         .anyRequest().authenticated()
 
                 )
