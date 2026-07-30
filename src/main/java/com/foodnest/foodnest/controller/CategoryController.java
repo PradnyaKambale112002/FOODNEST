@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.foodnest.foodnest.entity.Category;
 import com.foodnest.foodnest.service.CategoryService;
-import org.springframework.web.bind.annotation.CrossOrigin;
+
 
 
 @RestController
