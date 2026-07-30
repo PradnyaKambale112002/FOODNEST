@@ -3,15 +3,22 @@ package com.foodnest.foodnest.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import com.foodnest.foodnest.config.JwtUtil;
+import com.foodnest.foodnest.dto.ApiResponse;
+import com.foodnest.foodnest.dto.LoginRequest;
+import com.foodnest.foodnest.dto.LoginResponse;
+import com.foodnest.foodnest.dto.UserResponse;
 import com.foodnest.foodnest.entity.User;
 import com.foodnest.foodnest.service.UserService;
-import com.foodnest.foodnest.dto.LoginRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import jakarta.validation.Valid;
-import com.foodnest.foodnest.dto.ApiResponse;
-import com.foodnest.foodnest.dto.UserResponse;
-import com.foodnest.foodnest.dto.LoginResponse;
+
 @RestController
 @RequestMapping("/users")
 public class UserController {
@@ -21,6 +28,62 @@ public class UserController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    // Register
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<UserResponse>> registerUser(
+            @Valid @RequestBody User user) {
+
+        User savedUser = userService.saveUser(user);
+
+        if (savedUser == null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ApiResponse<>(
+                            false,
+                            "Email already exists",
+                            null));
+        }
+
+        UserResponse response = new UserResponse(
+                savedUser.getId(),
+                savedUser.getName(),
+                savedUser.getEmail(),
+                savedUser.getPhone(),
+                savedUser.getAddress(),
+                savedUser.getRole());
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse<>(
+                        true,
+                        "User Registered Successfully",
+                        response));
+    }
+
+    // Login
+    @PostMapping("/login")
+    public ResponseEntity<?> loginUser(
+            @RequestBody LoginRequest loginRequest) {
+
+        User user = userService.loginUser(
+                loginRequest.getEmail(),
+                loginRequest.getPassword());
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse<>(
+                            false,
+                            "Invalid email or password",
+                            null));
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail());
+
+        LoginResponse response = new LoginResponse(
+                token,
+                user.getRole());
+
+        return ResponseEntity.ok(response);
+    }
 
     // Get All Users
     @GetMapping
@@ -36,7 +99,10 @@ public class UserController {
 
     // Update User
     @PutMapping("/{id}")
-    public User updateUser(@PathVariable int id, @RequestBody User user) {
+    public User updateUser(
+            @PathVariable int id,
+            @RequestBody User user) {
+
         return userService.updateUser(id, user);
     }
 
@@ -45,52 +111,33 @@ public class UserController {
     public String deleteUser(@PathVariable int id) {
         return userService.deleteUser(id);
     }
-    @PostMapping("/register")
-    public ApiResponse<UserResponse> registerUser(@Valid @RequestBody User user) {
 
-        User savedUser = userService.saveUser(user);
+    // Current Logged-in User
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
 
-        if (savedUser != null) {
+    	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-            UserResponse response = new UserResponse(
-                    savedUser.getId(),
-                    savedUser.getName(),
-                    savedUser.getEmail(),
-                    savedUser.getPhone(),
-                    savedUser.getAddress(),
-                    savedUser.getRole());
+    	String email = authentication.getName();
 
-            return new ApiResponse<>(
-                    true,
-                    "User Registered Successfully",
-                    response);
+    	User user = userService.getUserByEmail(email);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse<>(
+                            false,
+                            "User not found",
+                            null));
         }
 
-        return new ApiResponse<>(
-                false,
-                "Email Already Exists",
-                null);
-    }
-    @PostMapping("/login")
-    public LoginResponse loginUser(@RequestBody LoginRequest loginRequest) {
+        UserResponse response = new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getAddress(),
+                user.getRole());
 
-        User user = userService.loginUser(
-                loginRequest.getEmail(),
-                loginRequest.getPassword());
-
-        System.out.println("User = " + user);
-
-        if (user != null) {
-
-            String token = jwtUtil.generateToken(user.getEmail());
-
-            System.out.println("Role = " + user.getRole());
-
-            return new LoginResponse(token, user.getRole());
-        }
-
-        System.out.println("Login failed");
-
-        return null;
+        return ResponseEntity.ok(response);
     }
 }

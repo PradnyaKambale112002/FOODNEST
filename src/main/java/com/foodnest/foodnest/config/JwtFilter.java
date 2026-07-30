@@ -3,26 +3,26 @@ package com.foodnest.foodnest.config;
 import java.io.IOException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.foodnest.foodnest.service.CustomerUserDetailsService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import com.foodnest.foodnest.service.CustomerUserDetailsService;
-
-
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
     @Autowired
     private JwtUtil jwtUtil;
-    
+
     @Autowired
     private CustomerUserDetailsService customerUserDetailsService;
 
@@ -34,16 +34,25 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+        String email = null;
+        String token = null;
 
-            String token = authHeader.substring(7);
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
 
             try {
+                email = jwtUtil.extractEmail(token);
+            } catch (Exception e) {
+                System.out.println("Invalid JWT Token");
+            }
+        }
 
-                String email = jwtUtil.extractEmail(token);
+        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                UserDetails userDetails =
-                        customerUserDetailsService.loadUserByUsername(email);
+            UserDetails userDetails =
+                    customerUserDetailsService.loadUserByUsername(email);
+
+            if (jwtUtil.validateToken(token, userDetails)) {
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
@@ -51,11 +60,10 @@ public class JwtFilter extends OncePerRequestFilter {
                                 null,
                                 userDetails.getAuthorities());
 
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authentication);
+                authentication.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request));
 
-            } catch (Exception e) {
-                System.out.println("Invalid JWT Token");
+                SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }
 

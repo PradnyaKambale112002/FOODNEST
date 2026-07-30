@@ -3,6 +3,8 @@ package com.foodnest.foodnest.config;
 import java.security.Key;
 import java.util.Date;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import io.jsonwebtoken.Claims;
@@ -13,38 +15,56 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET =
-            "FoodNestSecretKeyFoodNestSecretKey123456";
+    @Value("${jwt.secret:FoodNestSecretKeyFoodNestSecretKey123456}")
+    private String secret;
 
-    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+    @Value("${jwt.expiration:86400000}")
+    private long expiration;
 
-    // Generate Token
+    private Key getSigningKey() {
+        return Keys.hmacShaKeyFor(secret.getBytes());
+    }
+
+    // Generate JWT Token
     public String generateToken(String email) {
 
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis()
-                        + 1000 * 60 * 60 * 24))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     // Extract Email
     public String extractEmail(String token) {
+        return extractAllClaims(token).getSubject();
+    }
 
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key)
+    // Extract Claims
+    public Claims extractAllClaims(String token) {
+
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-
-        return claims.getSubject();
     }
 
-    // Check Token Validity
-    public boolean isTokenValid(String token, String email) {
+    // Check Expiration
+    public boolean isTokenExpired(String token) {
 
-        return extractEmail(token).equals(email);
+        return extractAllClaims(token)
+                .getExpiration()
+                .before(new Date());
+    }
+
+    // Validate Token
+    public boolean validateToken(String token, UserDetails userDetails) {
+
+        String email = extractEmail(token);
+
+        return email.equals(userDetails.getUsername())
+                && !isTokenExpired(token);
     }
 }
