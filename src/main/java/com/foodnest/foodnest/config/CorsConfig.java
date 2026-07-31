@@ -16,6 +16,7 @@ public class CorsConfig {
         config.addAllowedOrigin("http://localhost:5173");
         config.addAllowedOrigin("http://localhost:5174");
         config.addAllowedOrigin("http://localhost:3000");
+        config.addAllowedOrigin("https://foodnest-frontend.vercel.app");
 
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
