@@ -36,16 +36,12 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(
-            "http://localhost:5173",
-            "http://localhost:5174",
-            "http://localhost:3000",
-            "https://foodnest-frontend.vercel.app"
-        ));
-
         configuration.setAllowedOriginPatterns(List.of(
-            "https://*.vercel.app"
-        ));
+        	    "http://localhost:5173",
+        	    "http://localhost:5174",
+        	    "http://localhost:3000",
+        	    "https://*.vercel.app"
+        	));
 
         configuration.setAllowedMethods(List.of(
             "GET",
